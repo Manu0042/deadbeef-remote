@@ -45,16 +45,16 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Header — minimal, no border, just sits on the page background */
+  /* Header — minimal, centered title in the brand color */
   header {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
     padding: 14px 18px 6px;
     background: transparent;
   }
   header h1 {
-    font-size: 13px; font-weight: 600; margin: 0;
-    color: var(--fg-dim);
-    letter-spacing: .8px; text-transform: uppercase;
+    font-size: 16px; font-weight: 700; margin: 0;
+    color: var(--accent);
+    letter-spacing: -.2px;
   }
 
   /* Generic icon button — borderless, ripple-free, square-ish hit target */
@@ -89,7 +89,10 @@
     background-size: cover; background-position: center; background-repeat: no-repeat;
     display: flex; align-items: center; justify-content: center;
     color: var(--fg-mute); font-size: 56px;
-    box-shadow: 0 14px 36px rgba(74, 33, 5, .20), 0 2px 6px rgba(74, 33, 5, .12);
+    box-shadow:
+      0 4px 8px rgba(74, 33, 5, .18),
+      0 18px 32px rgba(74, 33, 5, .28),
+      0 30px 60px rgba(74, 33, 5, .22);
   }
   .art-glyph { line-height: 1; opacity: .5; }
   .artwork.has-art .art-glyph { display: none; }
@@ -101,7 +104,7 @@
     -webkit-backdrop-filter: blur(8px);
     color: #fde4cf;
     font-size: 10px; font-weight: 700;
-    letter-spacing: .6px; text-transform: uppercase;
+    letter-spacing: .4px;
     font-variant-numeric: tabular-nums;
     pointer-events: none;
   }
@@ -156,7 +159,7 @@
   .seek input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
     width: 14px; height: 14px; border-radius: 50%;
-    background: var(--fg);
+    background: var(--accent);
     cursor: pointer;
     margin-top: -5.5px;
     box-shadow: 0 2px 6px rgba(74, 33, 5, .35);
@@ -165,7 +168,7 @@
   .seek input[type=range]:active::-webkit-slider-thumb { transform: scale(1.4); }
   .seek input[type=range]::-moz-range-thumb {
     width: 14px; height: 14px; border-radius: 50%;
-    background: var(--fg);
+    background: var(--accent);
     cursor: pointer;
     border: 0;
     box-shadow: 0 2px 6px rgba(74, 33, 5, .35);
@@ -183,9 +186,6 @@
     color: var(--accent);
   }
   .transport .play:active { color: var(--accent-2); transform: scale(.96); }
-  /* The ▶ glyph has visual whitespace on its right side that pushes it left of center;
-     nudge it back. The ⏸ glyph is symmetric, so we only translate when in play state. */
-  .transport .play.is-paused { padding-left: 6px; }
 
   /* Tabs as pill chips — modern, scrollable, justified center when they fit */
   .tabs {
@@ -290,9 +290,21 @@
       </div>
     </div>
     <div class="transport">
-      <button class="icon-btn" id="btnPrev" aria-label="Précédent">⏮</button>
-      <button class="icon-btn play" id="btnPlay" aria-label="Lecture/Pause">▶</button>
-      <button class="icon-btn" id="btnNext" aria-label="Suivant">⏭</button>
+      <button class="icon-btn" id="btnPrev" aria-label="Précédent">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+          <path fill="currentColor" d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+        </svg>
+      </button>
+      <button class="icon-btn play" id="btnPlay" aria-label="Lecture/Pause">
+        <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+          <path fill="currentColor" d="M8 5v14l11-7z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="btnNext" aria-label="Suivant">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+          <path fill="currentColor" d="M6 18l8.5-6L6 6zM16 6h2v12h-2z"/>
+        </svg>
+      </button>
     </div>
   </section>
 
@@ -464,24 +476,39 @@ async function resolveArtwork(plId, idx, artist, album, trackKey) {
 }
 
 // ---------- Render ----------
-// Build a short tag like "DSD64", "24/192", "16/44.1" from samplerate + bitspersample.
-// DSD files come through DeaDBeeF as bps=1 with very high samplerate (DSD64 = 2.8224 MHz, etc).
-// If samplerate is missing/unrecognized, falls back to whatever info we have.
+// Build a short tag like "PCM · 96 kHz" or "DSD · 1bit · 2.8 MHz" from
+// samplerate + bitspersample + codec.
+//
+// Notes on what beefweb/DeaDBeeF actually exposes:
+//  - %bitspersample% is NOT a real DeaDBeeF title-formatting field, so bps
+//    arrives as an empty string for everyone. We can only show "Xbit" when
+//    we can infer it (DSD is always 1bit).
+//  - %codec% returns the decoder name, not the file format: DSD files come
+//    through as "dsd_lsbf_planar" / "dsd_msbf_planar" / etc., so we match on
+//    a substring "dsd", not a word-boundary regex. As a backup, any sample
+//    rate ≥ 1 MHz means it's DSD (DSD64 = 2.8224 MHz).
 function formatAudioInfo(srStr, bpsStr, codec) {
   const sr = parseInt(srStr, 10);
   const bps = parseInt(bpsStr, 10);
   if (!sr) return '';
 
-  // DSD: bps=1, samplerate is the DSD bit-rate. 2822400 = 44100*64 = DSD64.
-  if (bps === 1 || /\bDSD\b/i.test(codec || '')) {
+  const codecLc = String(codec || '').toLowerCase();
+  const isDsd = sr >= 1_000_000 || /dsd|dsf|dff/.test(codecLc) || bps === 1;
+
+  if (isDsd) {
+    // DSD64 = 44100 × 64 = 2.8224 MHz, DSD128 = ×128, etc. The multiplier
+    // already encodes both the bit depth (always 1) and the sample rate, so
+    // we collapse the badge to just "DSD64" / "DSD128" / "DSD256" / "DSD512".
     const dsdMul = Math.round(sr / 44100);
-    if (dsdMul >= 32) return `DSD${dsdMul}`;
+    return `DSD${dsdMul}`;
   }
 
-  // PCM: show samplerate in kHz, drop trailing .0.
+  // PCM: kHz, drop trailing .0 (44.1 stays, 96 doesn't become 96.0).
+  // Bit depth is omitted because DeaDBeeF doesn't expose it.
   const khz = sr / 1000;
   const khzStr = Number.isInteger(khz) ? String(khz) : khz.toFixed(1);
-  return bps ? `${bps}/${khzStr}` : `${khzStr} kHz`;
+  const bitPart = bps ? ` · ${bps}bit` : '';
+  return `PCM${bitPart} · ${khzStr} kHz`;
 }
 
 function renderState(s) {
@@ -494,8 +521,12 @@ function renderState(s) {
   const isPlaying = p.playbackState === 'playing';
   const hasTrack = ai.index >= 0 && ai.duration > 0;
 
-  $('btnPlay').textContent = isPlaying ? '⏸' : '▶';
-  $('btnPlay').classList.toggle('is-paused', !isPlaying);
+  // Play/pause icon. Two distinct SVG paths instead of Unicode glyphs — Android
+  // sometimes renders ⏸ as a colored emoji square, and the path widths in the
+  // ▶ glyph push it off-center.
+  const ICON_PLAY  = '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+  $('btnPlay').innerHTML = isPlaying ? ICON_PAUSE : ICON_PLAY;
   $('trackTitle').textContent = title || (hasTrack ? '(sans titre)' : '—');
   $('trackArtist').textContent = artist
     ? (album ? `${artist} — ${album}` : artist)
@@ -766,9 +797,15 @@ if ('serviceWorker' in navigator) {
 // First boot
 startPolling();
 
-// Re-poll faster after returning to foreground
+// Pause polling entirely while the page is hidden (background tab, PWA in
+// background, screen off). When it comes back, run one poll immediately for
+// a snappy refresh and then resume the 1 Hz timer.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) poll();
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    startPolling();
+  }
 });
 </script>
 </body>
