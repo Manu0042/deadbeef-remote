@@ -53,9 +53,8 @@
   }
   header h1 {
     font-size: 16px; font-weight: 700; margin: 0;
-    color: var(--accent);
+    color: var(--fg);
     letter-spacing: -.2px;
-    text-shadow: 0 2px 4px rgba(74, 33, 5, .25);
   }
 
   /* Generic icon button — borderless, ripple-free, square-ish hit target */
@@ -188,35 +187,81 @@
   }
   .transport .play:active { color: var(--accent-2); transform: scale(.96); }
 
-  /* Tabs as pill chips — modern, scrollable, justified center when they fit */
-  .tabs {
-    display: flex; justify-content: center;
-    gap: 8px; padding: 12px 16px;
-    background: transparent;
-    overflow-x: auto; scrollbar-width: none;
+  /* Library — two-view container that toggles between folder list and tracks list */
+  .library {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
   }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
+  .lib-header {
+    position: relative;
+    display: flex; align-items: center;
+    padding: 10px 14px 6px;
     flex: 0 0 auto;
-    padding: 8px 14px; font-size: 13px; font-weight: 500;
+    min-height: 52px;
+  }
+  .lib-header h2 {
+    /* Shown on the folders view only — hidden in the tracks view to give the
+       album back its breathing room (and avoid clashing with the back button). */
+    display: none;
+    position: absolute; left: 0; right: 0;
+    margin: 0; font-size: 14px; font-weight: 700;
+    color: var(--fg);
+    letter-spacing: .2px;
+    text-align: center;
+    pointer-events: none;
+    padding: 0 52px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .library:not(.view-tracks) .lib-header h2 { display: block; }
+  .back-btn {
+    width: 36px; height: 36px;
     color: var(--fg-dim);
-    background: var(--surface-1);
-    border: 0; cursor: pointer; border-radius: 999px;
-    min-height: 36px;
-    display: inline-flex; align-items: center; gap: 6px;
-    transition: background-color .15s ease, color .15s ease;
-    white-space: nowrap;
+    flex: 0 0 auto;
+    position: relative; z-index: 1;
+    visibility: hidden; /* shown only in the tracks view */
   }
-  .tab:active { background: var(--surface-2); }
-  .tab.active {
-    color: var(--accent);
-    background: var(--accent-soft);
+  .back-btn:active { color: var(--fg); }
+  .library.view-tracks .back-btn { visibility: visible; }
+
+  .folders, .items {
+    flex: 1; min-height: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 4px 0 12px;
   }
+  /* Only one of the two panels is shown at a time */
+  .library:not(.view-tracks) .items   { display: none; }
+  .library.view-tracks      .folders { display: none; }
+
+  .folder {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 12px 18px;
+    cursor: pointer;
+    min-height: 56px;
+    position: relative;
+    transition: background-color .12s ease;
+  }
+  .folder:active { background: var(--surface-1); }
+  .folder.current::before {
+    content: ''; position: absolute;
+    left: 0; top: 8px; bottom: 8px; width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 0 2px 2px 0;
+  }
+  .folder.current .folder-name { color: var(--accent); }
+  .folder-name {
+    font-size: 15px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-align: center;
+    max-width: 100%;
+  }
+  /* Count + chevron hidden so the name is visually centered. The data is still
+     in the DOM in case we want to bring them back later. */
+  .folder-count, .folder-chevron { display: none; }
 
   /* Items list — no row borders, generous padding, accent treatment for the playing track */
-  .items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0 12px; }
   .item {
-    display: flex; align-items: center; gap: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
     padding: 10px 18px;
     cursor: pointer;
     min-height: 56px;
@@ -231,14 +276,10 @@
     border-radius: 0 2px 2px 0;
   }
   .item.playing .item-title { color: var(--accent); }
-  .item.playing .item-num { color: var(--accent); }
-  .item-num {
-    color: var(--fg-mute); font-size: 12px;
-    min-width: 22px; text-align: right;
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-  }
-  .item-text { flex: 1; min-width: 0; }
+  /* Track number and length hidden so the title/artist are visually centered.
+     The data is still in the DOM in case we want to bring them back later. */
+  .item-num, .item-len { display: none; }
+  .item-text { min-width: 0; max-width: 100%; text-align: center; }
   .item-title {
     font-size: 14px; font-weight: 500;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -246,10 +287,6 @@
   .item-sub {
     font-size: 12px; color: var(--fg-dim); margin-top: 2px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .item-len {
-    font-size: 12px; color: var(--fg-mute);
-    font-variant-numeric: tabular-nums;
   }
 
   .empty {
@@ -309,9 +346,19 @@
     </div>
   </section>
 
-  <nav class="tabs" id="tabs"></nav>
-  <section class="items" id="items">
-    <div class="empty">Connecte-toi pour voir les playlists.</div>
+  <section class="library" id="library">
+    <header class="lib-header" id="libHeader">
+      <button class="icon-btn back-btn" id="btnBack" aria-label="Retour">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor" d="M15.5 19 8 11.5 15.5 4l1.4 1.4-6.1 6.1 6.1 6.1z"/>
+        </svg>
+      </button>
+      <h2 id="libTitle">Albums</h2>
+    </header>
+    <div class="folders" id="folders"></div>
+    <div class="items" id="items">
+      <div class="empty">Playlist vide.</div>
+    </div>
   </section>
 </main>
 
@@ -564,10 +611,12 @@ function renderState(s) {
     if (sourcePlaylistId === null) refreshSource(ai.playlistId);
   }
 
-  // Highlight playing item if visible, and scroll it into view when the track changes.
-  // The active dir group must contain the currently-playing original index for highlight to apply.
+  // Highlight playing item and folder. The track marker only matters in the
+  // tracks view; the folder marker only matters in the folder list. On track
+  // change, scroll the visible row into view (whichever view we're on).
   const prevAi = lastState?.player?.activeItem;
   const trackChanged = !prevAi || prevAi.playlistId !== ai.playlistId || prevAi.index !== ai.index;
+
   document.querySelectorAll('.item.playing').forEach(el => el.classList.remove('playing'));
   if (hasTrack && ai.playlistId === sourcePlaylistId) {
     const el = document.querySelector(`.item[data-orig-idx="${ai.index}"]`);
@@ -577,22 +626,53 @@ function renderState(s) {
     }
   }
 
+  // Refresh the "current" folder marker if the playing dir might have changed.
+  if (trackChanged && dirGroups.length) {
+    const folders = $('folders');
+    folders.querySelectorAll('.folder.current').forEach(el => el.classList.remove('current'));
+    if (hasTrack && ai.playlistId === sourcePlaylistId) {
+      const idx = dirGroups.findIndex(g => g.items.some(it => it.originalIndex === ai.index));
+      if (idx >= 0 && folders.children[idx]) {
+        folders.children[idx].classList.add('current');
+      }
+    }
+  }
+
   lastState = s;
 }
 
-function renderTabs() {
-  const wrap = $('tabs');
+function renderFolders() {
+  const wrap = $('folders');
   wrap.innerHTML = '';
+  if (!dirGroups.length) {
+    wrap.innerHTML = '<div class="empty">Playlist vide.</div>';
+    return;
+  }
+  // Which group contains the currently-playing track (if any)?
+  const ai = lastState?.player?.activeItem;
+  const playingDir = (ai && ai.playlistId === sourcePlaylistId && ai.index >= 0)
+    ? dirGroups.findIndex(g => g.items.some(it => it.originalIndex === ai.index))
+    : -1;
+
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="m9 6 6 6-6 6z"/></svg>';
+  const frag = document.createDocumentFragment();
   dirGroups.forEach((g, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (i === activeDirIdx ? ' active' : '');
-    btn.innerHTML = escapeHtml(g.dir);
-    btn.onclick = () => selectDir(i);
-    wrap.appendChild(btn);
+    const div = document.createElement('div');
+    div.className = 'folder' + (i === playingDir ? ' current' : '');
+    div.innerHTML = `
+      <div class="folder-name">${escapeHtml(g.dir)}</div>
+      <div class="folder-count">${g.items.length}</div>
+      <div class="folder-chevron">${CHEVRON}</div>
+    `;
+    div.onclick = () => openFolder(i);
+    frag.appendChild(div);
   });
-  // Keep the active tab visible after rebuild
-  const active = wrap.querySelector('.tab.active');
-  if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+  wrap.appendChild(frag);
+
+  if (playingDir >= 0) {
+    const el = wrap.children[playingDir];
+    if (el) el.scrollIntoView({ block: 'center' });
+  }
 }
 
 function escapeHtml(s) {
@@ -605,7 +685,7 @@ function renderItems() {
   const list = $('items');
   const group = dirGroups[activeDirIdx];
   if (!group || !group.items.length) {
-    list.innerHTML = '<div class="empty">Playlist vide.</div>';
+    list.innerHTML = '<div class="empty">Dossier vide.</div>';
     return;
   }
   const ai = lastState?.player?.activeItem;
@@ -620,7 +700,7 @@ function renderItems() {
       <div class="item-num">${escapeHtml(trackNo) || (i + 1)}</div>
       <div class="item-text">
         <div class="item-title">${escapeHtml(title) || '(sans titre)'}</div>
-        <div class="item-sub">${escapeHtml(artist)}${album ? ' — ' + escapeHtml(album) : ''}</div>
+        <div class="item-sub">${escapeHtml(artist)}</div>
       </div>
       <div class="item-len">${escapeHtml(lengthStr)}</div>
     `;
@@ -663,7 +743,7 @@ async function refreshSource(preferredId) {
   try {
     const r = await Playlists.list();
     const all = r.playlists || [];
-    if (!all.length) { dirGroups = []; renderTabs(); renderItems(); return; }
+    if (!all.length) { dirGroups = []; renderFolders(); renderItems(); return; }
     const chosen =
       (preferredId && all.find(p => p.id === preferredId)) ||
       all.find(p => p.isCurrent) ||
@@ -675,22 +755,23 @@ async function refreshSource(preferredId) {
       : [];
     dirGroups = groupByDir(items);
     if (activeDirIdx >= dirGroups.length) activeDirIdx = 0;
-    // If a track is playing in the source playlist, default to its dir group
-    const ai = lastState?.player?.activeItem;
-    if (ai && ai.playlistId === sourcePlaylistId && ai.index >= 0) {
-      const found = dirGroups.findIndex(g => g.items.some(it => it.originalIndex === ai.index));
-      if (found >= 0) activeDirIdx = found;
-    }
-    renderTabs();
+    renderFolders();
     renderItems();
   } catch (e) { handleErr(e); }
 }
 
-function selectDir(idx) {
+// Open a folder: switch to the tracks view and render the dir's tracks.
+function openFolder(idx) {
   if (idx < 0 || idx >= dirGroups.length) return;
   activeDirIdx = idx;
-  renderTabs();
+  $('library').classList.add('view-tracks');
   renderItems();
+}
+
+// Close the tracks view and return to the folder list.
+function closeFolder() {
+  $('library').classList.remove('view-tracks');
+  renderFolders();
 }
 
 async function poll() {
@@ -756,37 +837,8 @@ seekBar.addEventListener('pointerup', onSeekEnd);
 seekBar.addEventListener('pointercancel', onSeekEnd);
 seekBar.addEventListener('change', onSeekEnd);
 
-// Swipe on the tab bar to select the previous/next directory tab.
-// We use pointer events; a horizontal travel beyond SWIPE_PX (and dominantly
-// horizontal — guards against vertical scrolls in the parent) commits the swap.
-(function wireTabSwipe() {
-  const SWIPE_PX = 60;
-  const tabs = $('tabs');
-  let startX = 0, startY = 0, tracking = false, fired = false;
-  tabs.addEventListener('pointerdown', (e) => {
-    tracking = true; fired = false;
-    startX = e.clientX; startY = e.clientY;
-  });
-  tabs.addEventListener('pointermove', (e) => {
-    if (!tracking || fired) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if (Math.abs(dx) < SWIPE_PX) return;
-    if (Math.abs(dx) < Math.abs(dy)) return; // vertical-dominant → ignore
-    fired = true;
-    // Swipe left (dx < 0) → next tab; swipe right → previous tab.
-    selectDir(activeDirIdx + (dx < 0 ? 1 : -1));
-  });
-  const stop = () => { tracking = false; };
-  tabs.addEventListener('pointerup', stop);
-  tabs.addEventListener('pointercancel', stop);
-  tabs.addEventListener('pointerleave', stop);
-  // Suppress the click that follows a successful swipe so the tab under the
-  // release point doesn't get re-selected on top of the swipe action.
-  tabs.addEventListener('click', (e) => {
-    if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
-  }, true);
-})();
+// Back button — return from the tracks view to the folder list.
+$('btnBack').onclick = closeFolder;
 
 // Service worker
 if ('serviceWorker' in navigator) {

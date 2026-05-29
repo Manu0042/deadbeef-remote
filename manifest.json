@@ -1,6 +1,6 @@
 {
   "name": "DeaDBeeF Remote",
-  "short_name": "DDB Remote",
+  "short_name": "DDBF Remote",
   "description": "DeaDBeeF remote via beefweb",
   "start_url": "./index.html",
   "scope": "./",
