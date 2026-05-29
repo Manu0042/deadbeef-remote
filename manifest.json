@@ -1,7 +1,7 @@
 {
   "name": "DeaDBeeF Remote",
   "short_name": "DDB Remote",
-  "description": "Télécommande pour DeaDBeeF via beefweb",
+  "description": "DeaDBeeF remote via beefweb",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",

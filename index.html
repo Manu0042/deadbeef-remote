@@ -122,9 +122,13 @@
     background: var(--accent); color: white;
   }
   .transport .play:active { background: var(--accent2); }
+  /* The ▶ glyph has visual whitespace on its right side that pushes it left of center;
+     nudge it back. The ⏸ glyph is symmetric, so we only translate when in play state. */
+  .transport .play.is-paused { padding-left: 4px; }
 
   .tabs {
-    display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: center;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
     background: var(--bg2); overflow-x: auto; scrollbar-width: none;
   }
   .tabs::-webkit-scrollbar { display: none; }
@@ -188,7 +192,6 @@
     </div>
     <div class="transport">
       <button class="icon-btn" id="btnPrev" aria-label="Précédent">⏮</button>
-      <button class="icon-btn" id="btnStop" aria-label="Stop">⏹</button>
       <button class="icon-btn play" id="btnPlay" aria-label="Lecture/Pause">▶</button>
       <button class="icon-btn" id="btnNext" aria-label="Suivant">⏭</button>
     </div>
@@ -373,6 +376,7 @@ function renderState(s) {
   const hasTrack = ai.index >= 0 && ai.duration > 0;
 
   $('btnPlay').textContent = isPlaying ? '⏸' : '▶';
+  $('btnPlay').classList.toggle('is-paused', !isPlaying);
   $('trackTitle').textContent = title || (hasTrack ? '(sans titre)' : '—');
   $('trackArtist').textContent = artist
     ? (album ? `${artist} — ${album}` : artist)
@@ -406,11 +410,16 @@ function renderState(s) {
     if (activePlaylistId === null) selectPlaylist(ai.playlistId);
   }
 
-  // Highlight playing item if visible
+  // Highlight playing item if visible, and scroll it into view when the track changes
+  const prevAi = lastState?.player?.activeItem;
+  const trackChanged = !prevAi || prevAi.playlistId !== ai.playlistId || prevAi.index !== ai.index;
   document.querySelectorAll('.item.playing').forEach(el => el.classList.remove('playing'));
   if (hasTrack && ai.playlistId === activePlaylistId) {
     const el = document.querySelector(`.item[data-idx="${ai.index}"]`);
-    if (el) el.classList.add('playing');
+    if (el) {
+      el.classList.add('playing');
+      if (trackChanged) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   }
 
   lastState = s;
@@ -459,6 +468,12 @@ function renderItems(items, activeIdx) {
   });
   list.innerHTML = '';
   list.appendChild(frag);
+
+  // Scroll the playing item into view after the list is rebuilt (e.g. when switching tabs to the active playlist)
+  if (activeIdx >= 0) {
+    const el = list.querySelector(`.item[data-idx="${activeIdx}"]`);
+    if (el) el.scrollIntoView({ block: 'center' });
+  }
 }
 
 // ---------- Actions ----------
@@ -522,7 +537,6 @@ function handleErr(e) {
 
 // ---------- Wire UI ----------
 $('btnPlay').onclick = () => Player.play().catch(handleErr);
-$('btnStop').onclick = () => Player.stop().catch(handleErr);
 $('btnNext').onclick = () => Player.next().catch(handleErr);
 $('btnPrev').onclick = () => Player.prev().catch(handleErr);
 

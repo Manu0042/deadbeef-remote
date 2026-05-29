@@ -10,3 +10,8 @@ Thumbs.db
 
 # Local artwork cache, server logs, anything ad-hoc
 *.log
+
+# Local-only files
+cl.bat
+CLAUDE.md
+push.sh
