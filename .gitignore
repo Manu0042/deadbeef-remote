@@ -1,0 +1,12 @@
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local artwork cache, server logs, anything ad-hoc
+*.log
