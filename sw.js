@@ -1,7 +1,7 @@
 // DeaDBeeF Remote — service worker
 // Caches the app shell for offline UI; never caches API or artwork (they must be live).
 
-const CACHE = 'ddb-remote-v5';
+const CACHE = 'ddbf-remote-v6';
 const SHELL = [
   './',
   './index.html',
