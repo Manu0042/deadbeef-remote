@@ -7,8 +7,8 @@
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
   "orientation": "portrait",
-  "background_color": "#fde4cf",
-  "theme_color": "#fde4cf",
+  "background_color": "#dbcfb4",
+  "theme_color": "#dbcfb4",
   "lang": "fr",
   "icons": [
     {

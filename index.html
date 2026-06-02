@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#fde4cf">
-<meta name="theme-color" content="#fde4cf" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#fde4cf" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#dbcfb4">
+<meta name="theme-color" content="#dbcfb4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#dbcfb4" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light">
 <title>DeaDBeeF Remote</title>
 <link rel="manifest" href="manifest.json">
@@ -13,22 +13,22 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root {
-    /* Surfaces — warm pale orange background, slight tonal steps for elevation */
-    --bg:         #fde4cf;
-    --surface-1:  #fbd9bd;
-    --surface-2:  #f6caa3;
-    --surface-3:  #efb888;
-    /* Text — warm dark brown, three steps for hierarchy */
-    --fg:         #2a1a0c;
-    --fg-dim:     #6b4d35;
-    --fg-mute:    #a07854;
-    /* Brand accent — saturated orange that reads on the pale background */
-    --accent:     #e8590c;
-    --accent-2:   #c2410c;
-    --accent-soft: rgba(232, 89, 12, .14);
+    /* Surfaces — soft wet-sand pastel beige, slight greenish cool tint */
+    --bg:         #dbcfb4;
+    --surface-1:  #d2c5a6;
+    --surface-2:  #c5b791;
+    --surface-3:  #b6a87f;
+    /* Text — muted dark olive-brown for warmth without harshness */
+    --fg:         #2d2818;
+    --fg-dim:     #66573e;
+    --fg-mute:    #8e7e5e;
+    /* Brand accent — deep cocoa brown, dark enough to read on the sand */
+    --accent:     #5a3a22;
+    --accent-2:   #3e2814;
+    --accent-soft: rgba(90, 58, 34, .14);
     /* Status */
-    --ok:         #15803d;
-    --err:        #b91c1c;
+    --ok:         #5a7038;
+    --err:        #94322f;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { color-scheme: light; }
@@ -92,19 +92,19 @@
     display: flex; align-items: center; justify-content: center;
     color: var(--fg-mute); font-size: 56px;
     box-shadow:
-      0 4px 8px rgba(74, 33, 5, .18),
-      0 18px 32px rgba(74, 33, 5, .28),
-      0 30px 60px rgba(74, 33, 5, .22);
+      0 4px 8px rgba(45, 40, 24, .18),
+      0 18px 32px rgba(45, 40, 24, .26),
+      0 30px 60px rgba(45, 40, 24, .20);
   }
   .art-glyph { line-height: 1; opacity: .5; }
   .artwork.has-art .art-glyph { display: none; }
   .art-format {
     position: absolute; top: 10px; left: 10px;
     padding: 4px 9px; border-radius: 999px;
-    background: rgba(42, 26, 12, .82);
+    background: rgba(45, 40, 24, .82);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: #fde4cf;
+    color: #dbcfb4;
     font-size: 10px; font-weight: 700;
     letter-spacing: .4px;
     font-variant-numeric: tabular-nums;
@@ -164,7 +164,7 @@
     background: var(--accent);
     cursor: pointer;
     margin-top: -5.5px;
-    box-shadow: 0 2px 6px rgba(74, 33, 5, .35);
+    box-shadow: 0 2px 6px rgba(45, 40, 24, .32);
     transition: transform .12s ease;
   }
   .seek input[type=range]:active::-webkit-slider-thumb { transform: scale(1.4); }
@@ -173,7 +173,7 @@
     background: var(--accent);
     cursor: pointer;
     border: 0;
-    box-shadow: 0 2px 6px rgba(74, 33, 5, .35);
+    box-shadow: 0 2px 6px rgba(45, 40, 24, .32);
   }
 
   /* Transport — flat icon-only buttons, no colored play disc */
@@ -303,9 +303,9 @@
     display: none;
     margin: 6px 18px 0;
     padding: 9px 14px; border-radius: 10px;
-    background: rgba(185, 28, 28, .12);
+    background: rgba(148, 50, 47, .12);
     color: var(--err); font-size: 12px; text-align: center;
-    border: 1px solid rgba(185, 28, 28, .25);
+    border: 1px solid rgba(148, 50, 47, .28);
   }
   .err-banner.show { display: block; }
 </style>

@@ -7,9 +7,9 @@ $bmp = New-Object System.Drawing.Bitmap($Size, $Size)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.SmoothingMode = 'AntiAlias'
 
-# Theme colors — match the app's pale-orange / accent-orange theme
-$bgColor      = [System.Drawing.Color]::FromArgb(0xfd, 0xe4, 0xcf)  # #fde4cf  pale orange
-$accentColor  = [System.Drawing.Color]::FromArgb(0xe8, 0x59, 0x0c)  # #e8590c  saturated orange
+# Theme colors — soft wet-sand pastel beige with deep cocoa accent
+$bgColor      = [System.Drawing.Color]::FromArgb(0xdb, 0xcf, 0xb4)  # #dbcfb4  wet sand
+$accentColor  = [System.Drawing.Color]::FromArgb(0x5a, 0x3a, 0x22)  # #5a3a22  deep cocoa
 
 # Solid background — full bleed so the icon also works as a maskable
 $bg = New-Object System.Drawing.SolidBrush $bgColor
