@@ -53,6 +53,15 @@
     padding: 14px 18px 6px;
     background: transparent;
   }
+  .version-badge {
+    font: inherit; font-size: 11px; font-weight: 600; line-height: 1;
+    padding: 4px 8px; border-radius: 999px; border: 0; cursor: pointer;
+    color: var(--fg-dim); background: var(--accent-soft);
+    user-select: none;
+  }
+  .version-badge.busy { opacity: .6; pointer-events: none; }
+  .version-badge.ok { color: var(--ok); }
+  .version-badge.update { color: #fff; background: var(--accent); }
   header h1 {
     font-size: 16px; font-weight: 700; margin: 0;
     color: var(--fg);
@@ -314,6 +323,7 @@
 
 <header>
   <h1>DeaDBeeF Remote</h1>
+  <button class="version-badge" id="versionBadge" type="button" aria-label="Version de l'application, toucher pour vérifier les mises à jour"></button>
 </header>
 
 <div class="err-banner" id="errBanner"></div>
@@ -372,6 +382,7 @@
 
 // ---------- Config ----------
 const SERVER_URL = 'http://192.168.1.21:8880';
+const APP_VERSION = 'v36'; // garder identique au suffixe de CACHE dans sw.js
 const COLS_TRACK = '%artist%,%title%,%album%,%length%,%samplerate%,%bitspersample%,%channels%,%codec%';
 const COLS_ITEM  = '%tracknumber%,%title%,%artist%,%album%,%length%,%length_seconds%,%path%';
 const POLL_MS = 1000;
@@ -804,7 +815,7 @@ async function poll() {
     renderState(s);
     if (sourcePlaylistId === null) await refreshSource();
   } catch (e) {
-    setBanner(`Connexion impossible : ${e.message}`);
+    setBanner(`Connexion impossible : ${e.name}: ${e.message} (page: ${location.origin}, api: ${SERVER_URL})`);
   }
 }
 
@@ -863,12 +874,107 @@ seekBar.addEventListener('change', onSeekEnd);
 // Back button — return from the tracks view to the folder list.
 $('btnBack').onclick = closeFolder;
 
-// Service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+// ---------- Version badge & manual update ----------
+const versionBadge = $('versionBadge');
+let swReg = null;
+let badgeTimer = null;
+
+function setBadge(text, cls) {
+  clearTimeout(badgeTimer);
+  versionBadge.textContent = text;
+  versionBadge.className = 'version-badge' + (cls ? ' ' + cls : '');
+}
+const resetBadge = () => setBadge(APP_VERSION);
+const flashBadge = (text, cls, ms = 2500) => {
+  setBadge(text, cls);
+  badgeTimer = setTimeout(resetBadge, ms);
+};
+resetBadge();
+
+// Reload once when a new service worker takes control (only if one was already in charge).
+let reloading = false;
+const hadController = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+if ('serviceWorker' in navigator && hadController) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
   });
 }
+
+function watchRegistration(reg) {
+  const announceIfWaiting = () => {
+    if (reg.waiting && navigator.serviceWorker.controller) setBadge('↻ Mettre à jour', 'update');
+  };
+  announceIfWaiting();
+  reg.addEventListener('updatefound', () => {
+    const w = reg.installing;
+    if (!w) return;
+    w.addEventListener('statechange', () => {
+      if (w.state === 'installed') announceIfWaiting();
+    });
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      swReg = reg;
+      watchRegistration(reg);
+      reg.update().catch(() => {});
+    }).catch(() => {});
+  });
+  // Re-check whenever the app comes back to the foreground.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && swReg) swReg.update().catch(() => {});
+  });
+}
+
+async function hardRefresh() {
+  // Fallback when no service worker is available (e.g. plain http on a phone).
+  try {
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (_) {}
+  location.reload();
+}
+
+versionBadge.addEventListener('click', async () => {
+  // A new version is already downloaded: activate it (page reloads on controllerchange).
+  if (swReg && swReg.waiting) {
+    setBadge('Mise à jour…', 'busy');
+    swReg.waiting.postMessage('SKIP_WAITING');
+    setTimeout(() => { if (!reloading) location.reload(); }, 3000); // safety net
+    return;
+  }
+  // No service worker: plain forced refresh.
+  if (!swReg) {
+    setBadge('Actualisation…', 'busy');
+    hardRefresh();
+    return;
+  }
+  // Otherwise: look for a new version.
+  setBadge('Vérification…', 'busy');
+  try {
+    await swReg.update();
+    // Give a freshly found worker time to finish installing.
+    const w = swReg.installing;
+    if (w && w.state !== 'installed') {
+      await new Promise((res) => {
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' || w.state === 'redundant') res();
+        });
+        setTimeout(res, 15000);
+      });
+    }
+    if (swReg.waiting) setBadge('↻ Mettre à jour', 'update');
+    else flashBadge('À jour ✓', 'ok');
+  } catch (_) {
+    flashBadge('Hors ligne', '');
+  }
+});
 
 // First boot
 startPolling();

@@ -1,7 +1,7 @@
 // DeaDBeeF Remote — service worker
 // Caches the app shell for offline UI; never caches API or artwork (they must be live).
 
-const CACHE = 'ddbf-remote-v34';
+const CACHE = 'ddbf-remote-v36';
 const SHELL = [
   './',
   './index.html',
@@ -12,8 +12,14 @@ const SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    // cache:'reload' bypasses the HTTP cache so an update really fetches fresh files.
+    // No automatic skipWaiting: the page asks for it when the user taps the version badge.
+    caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
